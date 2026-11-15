@@ -1,0 +1,12 @@
+/build/
+/build-*/
+/.vs/
+/out/
+*.exe
+*.obj
+*.o
+*.pdb
+.DS_Store
+*.tmp
+__pycache__/
+*.pyc

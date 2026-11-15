@@ -1,0 +1,14 @@
+ticks=14
+issued_inputs=12
+server_ack=12
+client_ack=12
+server_position=14
+predicted_position=14
+peak_state_gap=1
+upstream_sent=14
+upstream_dropped=3
+upstream_reordered=5
+downstream_sent=14
+downstream_dropped=4
+downstream_reordered=2
+converged=true
