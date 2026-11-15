@@ -109,3 +109,11 @@ The starter includes **23 C++ unit tests**, **5 Python standard-library CLI test
 - A stable final state does not prove optimal prediction quality or production safety.
 
 See [design details](docs/design.md), [local validation evidence](evidence/local-validation.md), [reproducible demo summary](evidence/demo-summary.txt), and [per-tick trace](evidence/demo-trace.csv). The local Linux and Windows validation logs are dated evidence; the linked GitHub Actions run independently verifies hosted Windows and Ubuntu builds. All results use synthetic scenarios, not production networking measurements.
+
+## v0.2: bounded retransmission experiment
+
+`netsync compare` runs the same scripted input and cyclic fault patterns using two retry policies: baseline (all pending commands every tick) and bounded (at most three oldest pending commands every two ticks). It prints a CSV comparison. The original `demo`, `ideal`, and `trace` modes remain unchanged.
+
+The deterministic local comparison showed **33 vs 27 transmitted command entries**, but **14 vs 19 ticks to converge** and **1 vs 2 peak position gap**. These are synthetic simulation counters, **not** real bandwidth or latency measurements. See [the evidence and methodology](evidence/retransmission-validation.md) and [the checked-in CSV](evidence/retransmission-comparison.csv).
+
+The v0.2 suite includes **29 C++ unit tests, 7 CLI tests, and 6 CTest entries**, verified on GCC 14 and Clang 17. Windows and GitHub CI for v0.2 require a separate check.

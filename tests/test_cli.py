@@ -57,6 +57,23 @@ converged=true
         self.assertEqual(result.returncode, 2)
         self.assertIn("Unknown command", result.stderr)
 
+    def test_compare_matches_checked_in_csv(self):
+        result = self.run_cli("compare")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        evidence = pathlib.Path(__file__).resolve().parents[1] / "evidence" / "retransmission-comparison.csv"
+        self.assertEqual(result.stdout, evidence.read_text(encoding="utf-8"))
+
+    def test_compare_bounds_packets_and_converges(self):
+        import csv
+        import io
+        result = self.run_cli("compare")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        entries = list(csv.DictReader(io.StringIO(result.stdout)))
+        self.assertEqual([entry["policy"] for entry in entries], ["baseline", "bounded"])
+        self.assertTrue(all(entry["converged"] == "true" for entry in entries))
+        self.assertLess(int(entries[1]["command_entries_sent"]), int(entries[0]["command_entries_sent"]))
+        self.assertLessEqual(int(entries[1]["largest_batch"]), 3)
+
     def test_help_is_available(self):
         result = self.run_cli("help")
         self.assertEqual(result.returncode, 0)

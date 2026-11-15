@@ -22,7 +22,10 @@ Command Client::issue(int movement) {
     return command;
 }
 
-std::vector<Command> Client::unacknowledged() const { return pending_; }
+std::vector<Command> Client::unacknowledged(std::size_t limit) const {
+    if (limit == 0) throw std::invalid_argument("Command batch limit must be positive");
+    return {pending_.begin(), pending_.begin() + std::min(limit, pending_.size())};
+}
 
 void Client::receive(const Snapshot& snapshot) {
     if (snapshot.acknowledged > issued_ ||
