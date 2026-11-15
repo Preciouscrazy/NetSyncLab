@@ -98,7 +98,7 @@ evidence/local-validation.md    Real environment-specific test evidence
 
 ## Test coverage
 
-The starter includes **23 C++ unit tests**, **5 Python standard-library CLI tests**, and **5 CTest checks** (C++ suite, three example command invocations, and CLI golden-output suite). Tests cover loss, delay, reordering, duplicate command delivery, stale snapshots, erroneous sequence/position values, prediction replay, stable output, non-convergence under complete link failure, and CLI errors. GitHub Actions is configured for **Windows and Ubuntu**, but hosted results must be confirmed after publication.
+The starter includes **23 C++ unit tests**, **5 Python standard-library CLI tests**, and **5 CTest checks** (C++ suite, three example command invocations, and CLI golden-output suite). Tests cover loss, delay, reordering, duplicate command delivery, stale snapshots, erroneous sequence/position values, prediction replay, stable output, non-convergence under complete link failure, and CLI errors. **Cross-platform GitHub Actions verified:** The initial push to `main` (commit [`d3af238`](https://github.com/Preciouscrazy/NetSyncLab/commit/d3af23800d978d6dfb968f68a2e49d8d86abbdd7)) passed the CMake build, all five CTest checks, and the source-hygiene scan on both **Windows** and **Ubuntu**. See the [successful workflow run](https://github.com/Preciouscrazy/NetSyncLab/actions/runs/43688559330) and [CI validation record](evidence/github-actions-validation.md).
 
 ## Intentional boundaries
 
@@ -108,4 +108,4 @@ The starter includes **23 C++ unit tests**, **5 Python standard-library CLI test
 - The demo ends as soon as issued commands are acknowledged; packets still in flight may be ignored after convergence.
 - A stable final state does not prove optimal prediction quality or production safety.
 
-See [design details](docs/design.md), [local validation evidence](evidence/local-validation.md), [reproducible demo summary](evidence/demo-summary.txt), and [per-tick trace](evidence/demo-trace.csv). Keep the reported validation environments truthful; local Linux results do **not** establish Windows or GitHub Actions success.
+See [design details](docs/design.md), [local validation evidence](evidence/local-validation.md), [reproducible demo summary](evidence/demo-summary.txt), and [per-tick trace](evidence/demo-trace.csv). The local Linux and Windows validation logs are dated evidence; the linked GitHub Actions run independently verifies hosted Windows and Ubuntu builds. All results use synthetic scenarios, not production networking measurements.
