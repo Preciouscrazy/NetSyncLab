@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstddef>
 #include <cstdint>
 #include <map>
 #include <vector>
@@ -28,7 +29,7 @@ int apply_movement(int position, int movement);
 class Client {
 public:
     Command issue(int movement);
-    std::vector<Command> unacknowledged() const;
+    std::vector<Command> unacknowledged(std::size_t limit = kMaxSequence) const;
     void receive(const Snapshot& snapshot);
 
     [[nodiscard]] int predicted_position() const noexcept { return predicted_; }

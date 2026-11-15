@@ -42,6 +42,18 @@ void client_predicts_immediately() {
     require(client.predicted_position() == 10 && client.pending_count() == 2, "predictions");
 }
 
+void bounded_batches_prioritize_oldest_commands() {
+    Client client;
+    client.issue(1);
+    client.issue(1);
+    client.issue(-1);
+    client.issue(0);
+    require(client.unacknowledged(2) == std::vector<Command>{{1, 1}, {2, 1}}, "oldest batch");
+    client.receive({1, 11});
+    require(client.unacknowledged(2) == std::vector<Command>{{2, 1}, {3, -1}}, "ack progression");
+    invalid([&] { (void)client.unacknowledged(0); });
+}
+
 void client_reconciles_unconfirmed_inputs() {
     Client client;
     client.issue(1);
@@ -203,6 +215,52 @@ void completely_lost_downstream_cannot_converge() {
     require(result.timeline.back().client_ack == 0, "client must not fabricate an ack");
 }
 
+void bounded_demo_converges_after_loss() {
+    const Scenario scenario = bounded_demo_scenario();
+    const Result result = simulate(scenario);
+    require(result.converged, "bounded policy must converge under scripted loss");
+    require(result.timeline.back().server_ack == 12 && result.timeline.back().client_ack == 12,
+            "all commands must be acknowledged");
+    require(result.largest_upstream_batch <= scenario.retransmission.max_commands_per_packet,
+            "batch cap violated");
+}
+
+void bounded_policy_reduces_transmitted_command_entries() {
+    const Result original = simulate(demo_scenario());
+    const Result bounded = simulate(bounded_demo_scenario());
+    require(original.converged && bounded.converged, "both policies should converge");
+    require(bounded.upstream_command_entries_sent < original.upstream_command_entries_sent,
+            "bounded policy did not reduce transmitted commands in the scripted scenario");
+}
+
+void bounded_single_command_packets_converge() {
+    Scenario scenario = ideal_scenario();
+    scenario.retransmission = {1, 2};
+    scenario.drain_ticks = 80;
+    const Result result = simulate(scenario);
+    require(result.converged, "one-command resend policy must eventually converge");
+    require(result.largest_upstream_batch == 1, "one-command limit violated");
+}
+
+void bounded_policy_is_repeatable() {
+    const Result a = simulate(bounded_demo_scenario());
+    const Result b = simulate(bounded_demo_scenario());
+    require(a.timeline == b.timeline && a.upstream_command_entries_sent == b.upstream_command_entries_sent,
+            "bounded result was not deterministic");
+}
+
+void bounded_policy_validates_limits() {
+    Scenario scenario = ideal_scenario();
+    scenario.retransmission = {0, 1};
+    invalid([&] { (void)simulate(scenario); });
+    scenario.retransmission = {kMaxSequence + 1, 1};
+    invalid([&] { (void)simulate(scenario); });
+    scenario.retransmission = {3, 0};
+    invalid([&] { (void)simulate(scenario); });
+    scenario.retransmission = {3, 10001};
+    invalid([&] { (void)simulate(scenario); });
+}
+
 void simulation_rejects_invalid_scenarios() {
     invalid([] { (void)simulate({{}, {{0, false}}, {{0, false}}, 1}); });
     invalid([] { (void)simulate({{2}, {{0, false}}, {{0, false}}, 1}); });
@@ -218,6 +276,7 @@ int main() {
         {"movement_rejects_invalid_values", movement_rejects_invalid_values},
         {"client_predicts_immediately", client_predicts_immediately},
         {"client_reconciles_unconfirmed_inputs", client_reconciles_unconfirmed_inputs},
+        {"bounded_batches_prioritize_oldest_commands", bounded_batches_prioritize_oldest_commands},
         {"client_corrects_authoritative_position", client_corrects_authoritative_position},
         {"client_ignores_delayed_snapshot", client_ignores_delayed_snapshot},
         {"client_rejects_invalid_snapshots", client_rejects_invalid_snapshots},
@@ -237,6 +296,11 @@ int main() {
         {"completely_lost_upstream_cannot_converge", completely_lost_upstream_cannot_converge},
         {"completely_lost_downstream_cannot_converge", completely_lost_downstream_cannot_converge},
         {"simulation_rejects_invalid_scenarios", simulation_rejects_invalid_scenarios},
+        {"bounded_demo_converges_after_loss", bounded_demo_converges_after_loss},
+        {"bounded_policy_reduces_transmitted_command_entries", bounded_policy_reduces_transmitted_command_entries},
+        {"bounded_single_command_packets_converge", bounded_single_command_packets_converge},
+        {"bounded_policy_is_repeatable", bounded_policy_is_repeatable},
+        {"bounded_policy_validates_limits", bounded_policy_validates_limits},
     };
     int failures = 0;
     for (const auto& [name, check] : checks) {

@@ -26,21 +26,40 @@ void print_summary(const netsync::Result& result) {
 
 int main(int argc, char** argv) {
     if (argc != 2) {
-        std::cerr << "Usage: netsync demo | ideal | trace | help\n";
+        std::cerr << "Usage: netsync demo | ideal | trace | compare | help\n";
         return 2;
     }
     const std::string_view command = argv[1];
     if (command == "help") {
         std::cout << "demo: scripted packet delay, loss and reordering\n"
                      "ideal: zero-delay, zero-loss reference\n"
-                     "trace: CSV timeline of the demo scenario\n";
+                     "trace: CSV timeline of the demo scenario\n"
+                     "compare: CSV full-batch vs bounded retransmission on identical faults\n";
         return 0;
     }
-    if (command != "demo" && command != "ideal" && command != "trace") {
+    if (command != "demo" && command != "ideal" && command != "trace" && command != "compare") {
         std::cerr << "Unknown command: " << command << '\n';
         return 2;
     }
     try {
+        if (command == "compare") {
+            const auto baseline = netsync::simulate(netsync::demo_scenario());
+            const auto bounded = netsync::simulate(netsync::bounded_demo_scenario());
+            const auto print_row = [](std::string_view label, const netsync::Result& r) {
+                const auto& final = r.timeline.back();
+                std::cout << label << ',' << r.timeline.size() << ','
+                          << (r.converged ? "true" : "false") << ','
+                          << final.server_ack << ',' << final.client_ack << ','
+                          << r.upstream.sent << ',' << r.upstream.dropped << ','
+                          << r.upstream_command_entries_sent << ','
+                          << r.largest_upstream_batch << ',' << r.peak_state_gap << '\n';
+            };
+            std::cout << "policy,ticks,converged,server_ack,client_ack,upstream_packets_sent,"
+                         "upstream_packets_dropped,command_entries_sent,largest_batch,peak_state_gap\n";
+            print_row("baseline", baseline);
+            print_row("bounded", bounded);
+            return baseline.converged && bounded.converged ? 0 : 1;
+        }
         const netsync::Result result = netsync::simulate(
             command == "ideal" ? netsync::ideal_scenario() : netsync::demo_scenario());
         if (command == "trace") {

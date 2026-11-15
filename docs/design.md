@@ -61,3 +61,11 @@ flowchart TB
 This simulator does not model independent networked players, true network sockets, encryption, authentication, acknowledgment spoofing, clock drift, server tick rates, interpolation, snapshots of complete world state, jitter buffers, network bandwidth or packet-size limits. Convergence with these synthetic patterns does not imply production safety or real game performance.
 
 A focused future experiment could introduce bounded command batches plus explicit retransmission and measure the resulting tradeoff between retransmission overhead and state-gap duration. Another experiment could add a separate, tested rollback model; do not mix it into this initial scope.
+
+## v0.2 bounded retransmission
+
+`Scenario::retransmission` adds two validated parameters: `max_commands_per_packet` (1..100000) and `resend_interval_ticks` (1..10000). Defaults reproduce the v0.1 full-batch behavior. At every interval boundary, a packet includes the **oldest unacknowledged commands** up to the configured cap; existing server-side contiguous-sequence application and client-side reconciliation remain unchanged.
+
+The metrics `Result::upstream_command_entries_sent` and `largest_upstream_batch` count attempted upstream payload entries and peak batch size, **including packets that are later dropped**. The `compare` command uses an identical scenario and scripted fault policy except for retransmission parameters; because faults are indexed by send ordinal, the actual dropped packet set changes with the number of sends.
+
+This is deterministic go-back-N-style retransmission rather than selective repeat, an RTT-aware timer, or congestion control. A small cap/long interval can trade lower payload volume for greater synchronization delay; see [comparison evidence](../evidence/retransmission-validation.md).

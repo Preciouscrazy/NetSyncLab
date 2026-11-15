@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cstdlib>
 #include <stdexcept>
+#include <utility>
 
 namespace netsync {
 
@@ -10,6 +11,13 @@ Result simulate(const Scenario& scenario) {
     if (scenario.movements.empty() || scenario.movements.size() > kMaxSequence ||
         scenario.drain_ticks > 10000) {
         throw std::invalid_argument("Scenario needs 1..100000 inputs and at most 10000 drain ticks");
+    }
+
+    if (scenario.retransmission.max_commands_per_packet == 0 ||
+        scenario.retransmission.max_commands_per_packet > kMaxSequence ||
+        scenario.retransmission.resend_interval_ticks == 0 ||
+        scenario.retransmission.resend_interval_ticks > 10000) {
+        throw std::invalid_argument("Retransmission policy is outside supported limits");
     }
 
     Client client;
@@ -21,8 +29,13 @@ Result simulate(const Scenario& scenario) {
     const std::uint64_t limit = scenario.movements.size() + scenario.drain_ticks;
     for (std::uint64_t tick = 0; tick < limit; ++tick) {
         if (tick < scenario.movements.size()) client.issue(scenario.movements[static_cast<std::size_t>(tick)]);
-        // Carry all unacknowledged inputs, so a dropped packet need not lose its commands.
-        if (client.pending_count() > 0) upstream.send(tick, client.unacknowledged());
+        // Go-back-N: retransmit the oldest outstanding commands at fixed tick intervals.
+        if (client.pending_count() > 0 && tick % scenario.retransmission.resend_interval_ticks == 0) {
+            auto batch = client.unacknowledged(scenario.retransmission.max_commands_per_packet);
+            result.upstream_command_entries_sent += batch.size(); // Includes dropped packets.
+            result.largest_upstream_batch = std::max(result.largest_upstream_batch, batch.size());
+            upstream.send(tick, std::move(batch));
+        }
         for (const auto& batch : upstream.deliver(tick)) server.receive(batch);
 
         // Acknowledgment snapshots are independent packets and can be lost or reordered.
@@ -49,6 +62,12 @@ Result simulate(const Scenario& scenario) {
 
 Scenario ideal_scenario() {
     return {{1, 1, 1, -1, 1, 1, -1, -1, 1, 1, -1, 1}, {{0, false}}, {{0, false}}, 16};
+}
+
+Scenario bounded_demo_scenario() {
+    Scenario scenario = demo_scenario();
+    scenario.retransmission = {3, 2};
+    return scenario;
 }
 
 Scenario demo_scenario() {
