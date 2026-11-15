@@ -44,7 +44,7 @@ Both runs use the same 12 scripted movement inputs, initial state, cyclic upstre
 - Local Linux **GCC 14** and **Clang 17**: 29/29 C++ tests, 7/7 CLI tests, 6/6 CTest entries, same exact comparison CSV output. Both builds treat compiler warnings as errors.
 - C++ tests exercise oldest-first batch selection, policy bounds, repeatability, one-command packets, loss recovery, and baseline-vs-bounded payload comparisons.
 - The original `demo`, `ideal`, and `trace` CLI behaviors and output are preserved and covered by existing golden CLI tests.
-- **Windows/MSVC and hosted Windows/Ubuntu CI for v0.2 must be checked separately.** Do not claim those environments passed solely from the local GCC/Clang results.
+- **Windows/MSVC and hosted Windows/Ubuntu CI for v0.2 are now verified separately.** See the [user-run Windows v0.2 record](windows-v02-validation.md) (29/29 C++, 7/7 CLI and 6/6 CTest) and [successful hosted Windows/Ubuntu run](ci-v02-validation.md) for merged commit `3d72b82`. The Linux GCC/Clang results above remain distinct local-toolchain evidence.
 
 ## Interpretation and limits
 
