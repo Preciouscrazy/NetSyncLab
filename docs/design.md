@@ -8,7 +8,7 @@ Build a tiny, inspectable model of input prediction and server reconciliation un
 
 1. **Inputs:** On each active tick the client issues a command with monotonically increasing sequence numbers beginning at 1 and movement in `{-1,0,+1}`. Position is clamped to `[0,20]` with initial position 10.
 2. **Prediction:** The client immediately applies the command locally and keeps every input that has not yet been acknowledged.
-3. **Upstream transmission:** Each tick with pending inputs sends a batch of *all* unacknowledged commands. Packets have send-order-driven cyclic delay/drop settings. A delay of zero means delivery in the same simulation tick.
+3. **Upstream transmission:** By default, each tick with pending inputs sends *all* unacknowledged commands. The optional v0.2 policy instead sends at a fixed tick interval and caps each batch to the **oldest** unacknowledged inputs. Packets have send-order-driven cyclic delay/drop settings; zero delay means same-tick delivery.
 4. **Authoritative server:** Commands are buffered by sequence. Only contiguous commands starting at `last_ack + 1` are processed; duplicate deliveries are idempotent. Conflicting duplicate values for an already-buffered sequence are rejected.
 5. **Downstream snapshots:** The server sends a snapshot `(last_contiguous_sequence, authoritative_position)` every simulation tick, even when no input is applied. Snapshots can also be delayed or dropped.
 6. **Reconciliation:** The client ignores stale or duplicate acknowledgments, replaces its authoritative baseline with an accepted snapshot, removes acknowledged commands, then reapplies outstanding inputs in order.
@@ -50,7 +50,8 @@ flowchart TB
 | Choice | Benefit | Limitation |
 | --- | --- | --- |
 | Integer, fixed-step movement | Stable, auditable results | Not a real-time physics engine |
-| Re-send all unacknowledged inputs | Recovers from loss without timers | Packet payload grows with pending inputs |
+| Full-batch resend (default) | Simple loss recovery without timers | Packet payload grows with pending inputs |
+| Bounded v0.2 resend | Limits per-packet command entries and send frequency | Can increase convergence ticks and peak state gap |
 | Contiguous sequence acknowledgment | Simple ordering model | No selective acknowledgments or RTT estimation |
 | Cyclic fault schedule | Fully reproducible tests | Not statistically realistic packet loss |
 | Static CSV trace | Easy to inspect and compare | No interactive visual dashboard or real telemetry |
@@ -58,9 +59,9 @@ flowchart TB
 
 ## Known limitations and next milestones
 
-This simulator does not model independent networked players, true network sockets, encryption, authentication, acknowledgment spoofing, clock drift, server tick rates, interpolation, snapshots of complete world state, jitter buffers, network bandwidth or packet-size limits. Convergence with these synthetic patterns does not imply production safety or real game performance.
+This simulator does not model independent networked players, true network sockets, encryption, authentication, acknowledgment spoofing, clock drift, real server tick rates, interpolation, snapshots of complete world state, jitter buffers, network bandwidth or **byte-level** packet-size limits. The v0.2 command-count cap does not model byte size. Convergence with these synthetic patterns does not imply production safety or real game performance.
 
-A focused future experiment could introduce bounded command batches plus explicit retransmission and measure the resulting tradeoff between retransmission overhead and state-gap duration. Another experiment could add a separate, tested rollback model; do not mix it into this initial scope.
+v0.2 already introduces a bounded command-count policy and fixed-tick retransmission. A useful next experiment would compare several caps and intervals under independently matched packet faults, then quantify payload bytes and convergence delay. A separate, tested rollback model could follow; it is outside this project's current scope.
 
 ## v0.2 bounded retransmission
 
